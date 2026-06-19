@@ -12,9 +12,21 @@ const editBtn = document.getElementById("editBtn");
 const updateBtn = document.getElementById("updateBtn");
 const cardContainer = document.getElementById("cardContainer");
 
+const spinner = document.getElementById("spinner");
+
 let userArr = [];
 
+function snackbar(msg, icon) {
+  swal.fire({
+    title: msg,
+    icon: icon,
+    timer: 2000,
+  });
+}
+
 function fetchUser() {
+  spinner.classList.remove("d-none");
+
   let xhr = new XMLHttpRequest();
   let postUrl = `${baseURL}/users`;
 
@@ -24,10 +36,8 @@ function fetchUser() {
   xhr.onload = function () {
     if (xhr.status >= 200 && xhr.status <= 299) {
       userArr = JSON.parse(xhr.response);
-
       creatCard(userArr.reverse());
-
-      cl(userArr);
+      spinner.classList.add("d-none");
     }
   };
 }
@@ -39,7 +49,7 @@ function creatCard(ele) {
   ele.forEach((ele, i) => {
     result += `
       <tr id="${ele.id}">
-        <td>${i + 1}</td>
+        <td>${userArr.length - i}</td>
         <td>${ele.name}</td>
         <td>${ele.username}</td>
         <td>${ele.email}</td>
@@ -68,6 +78,7 @@ function creatCard(ele) {
 
 function onSubmit(ele) {
   ele.preventDefault();
+  spinner.classList.remove("d-none");
 
   let newObj = {
     name: name.value,
@@ -82,11 +93,13 @@ function onSubmit(ele) {
   let posturl = `${baseURL}/users`;
   let xhr = new XMLHttpRequest();
   xhr.open("POST", posturl);
+  xhr.setRequestHeader("Content-Type", "application/json");
   xhr.send(JSON.stringify(newObj));
   xhr.onload = function () {
     if (xhr.status >= 200 && xhr.status <= 299) {
       let response = JSON.parse(xhr.response);
       let tr = document.createElement("tr");
+      tr.id = response.id;
       tr.innerHTML = `
         <td>${userArr.length}</td>
       <td>${newObj.name}</td>
@@ -98,11 +111,18 @@ function onSubmit(ele) {
       <td> <button class="btn btn-light " onclick="onDelete(this)"><i class="fa-solid fa-trash fa-2x  text-danger"></i></button></td>
   
         `;
+      cardContainer.prepend(tr);
     }
+
+    loginForm.reset();
+    spinner.classList.add("d-none");
+    snackbar("New user add successfully.", "success");
   };
 }
 
 function onEdit(ele) {
+  spinner.classList.remove("d-none");
+
   let editId = ele.closest("tr").id;
 
   let editUrl = `${baseURL}/users/${editId}`;
@@ -126,11 +146,21 @@ function onEdit(ele) {
 
       editBtn.classList.add("d-none");
       updateBtn.classList.remove("d-none");
+
+      loginForm.classList.remove("d-none");
+
+      loginForm.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
+    spinner.classList.add("d-none");
   };
 }
 
 function onUpdate() {
+  spinner.classList.remove("d-none");
+
   let updateId = localStorage.getItem("editId");
 
   let updateObj = {
@@ -154,38 +184,63 @@ function onUpdate() {
 
   xhr.onload = function () {
     if (xhr.status >= 200 && xhr.status <= 299) {
-      let updatedObj = JSON.parse(xhr.response);
+      let response = JSON.parse(xhr.response);
       let tr = document.getElementById(updateId);
       tr.innerHTML = `
         <td>${userArr.length}</td>
-      <td>${newObj.name}</td>
-      <td>${newObj.username}</td>
-      <td>${newObj.email}</td>
-      <td>${newObj.address}</td>
-      <td>${newObj.phone}</td>
+      <td>${updateObj.name}</td>
+      <td>${updateObj.username}</td>
+      <td>${updateObj.email}</td>
+      <td>${updateObj.address.city}</td>
+      <td>${updateObj.phone}</td>
       <td> <button class="btn btn-light " onclick="onEdit(this)"><i class="fa-solid text-success fa-2x  fa-pen-to-square"></i></button></td>
-      <td> <button class="btn btn-danger " onclick="onDelete(this)"><i class="fa-solid fa-trash fa-2x  text-danger"></i></button></td>
+      <td> <button class="btn btn-light " onclick="onDelete(this)"><i class="fa-solid fa-trash fa-2x  text-danger"></i></button></td>
   
         `;
+
+      editBtn.classList.remove("d-none");
+      updateBtn.classList.add("d-none");
+
+      tr.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
+    loginForm.reset();
+    spinner.classList.add("d-none");
+    snackbar("user update successfully.", "success");
   };
 }
 
-function onDelete(id) {
-  let deleteUrl = `${baseURL}/users/${id}`;
+function onDelete(ele) {
+  spinner.classList.remove("d-none");
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You want to delete it!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      let deletId = ele.closest("tr").id;
+      let deleteUrl = `${baseURL}/users/${deletId}`;
 
-  let xhr = new XMLHttpRequest();
+      let xhr = new XMLHttpRequest();
 
-  xhr.open("DELETE", deleteUrl);
-  xhr.send(null);
+      xhr.open("DELETE", deleteUrl);
+      xhr.send(null);
 
-  xhr.onload = function () {
-    if (xhr.status >= 200 && xhr.status <= 299) {
-      userArr = userArr.filter((ele) => ele.id != id);
-
-      creatCard(userArr);
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status <= 299) {
+          document.getElementById(deletId).remove();
+          spinner.classList.add("d-none");
+        }
+        snackbar("User delete successfully.", "success");
+      };
     }
-  };
+  });
 }
 
 loginForm.addEventListener("submit", onSubmit);
