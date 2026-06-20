@@ -213,7 +213,6 @@ function onUpdate() {
 }
 
 function onDelete(ele) {
-  spinner.classList.remove("d-none");
   Swal.fire({
     title: "Are you sure?",
     text: "You want to delete it!",
@@ -224,20 +223,29 @@ function onDelete(ele) {
     confirmButtonText: "Yes, delete it!",
   }).then((result) => {
     if (result.isConfirmed) {
+      spinner.classList.remove("d-none");
+
       let deletId = ele.closest("tr").id;
       let deleteUrl = `${baseURL}/users/${deletId}`;
 
       let xhr = new XMLHttpRequest();
-
       xhr.open("DELETE", deleteUrl);
       xhr.send(null);
 
       xhr.onload = function () {
+        spinner.classList.add("d-none");
+
         if (xhr.status >= 200 && xhr.status <= 299) {
           document.getElementById(deletId).remove();
-          spinner.classList.add("d-none");
+          snackbar("User deleted successfully.", "success");
+        } else {
+          snackbar("Failed to delete user.", "error");
         }
-        snackbar("User delete successfully.", "success");
+      };
+
+      xhr.onerror = function () {
+        spinner.classList.add("d-none");
+        snackbar("Network error.", "error");
       };
     }
   });
